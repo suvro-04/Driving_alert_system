@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Driver Drowsiness Detection System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Icons&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="header-title">AI-Powered Driver Drowsiness Detection System</h1>
+            <p class="header-subtitle">Real-time computer vision based driver safety monitoring</p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Status Indicator -->
+        <div style="margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 14px; color: #5f6368; font-weight: 500;">Backend Status:</span>
+            <span class="status-badge simulated" id="connectionStatus">
+                <span class="material-icons" style="font-size: 16px;">info</span>
+                <span>Simulation Mode</span>
+            </span>
+        </div>
+
+        <!-- Live Camera Section -->
+        <div class="grid-2col">
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons" style="color: #4285f4;">videocam</span>
+                    <span class="card-title">Live Driver Camera Feed</span>
+                </div>
+                <div class="card-content">
+                    <div class="video-container">
+                        <video id="webcam" autoplay playsinline muted></video>
+                        <canvas id="overlay"></canvas>
+                        <div class="alert-overlay" id="alertOverlay">
+                            <span class="material-icons">warning</span>
+                            <span>DROWSINESS DETECTED</span>
+                        </div>
+                    </div>
+                    <div class="controls">
+                        <button class="btn btn-primary" id="startBtn">
+                            <span class="material-icons" style="font-size: 18px;">play_arrow</span>
+                            Start Camera
+                        </button>
+                        <button class="btn btn-secondary" id="stopBtn" style="display: none;">
+                            <span class="material-icons" style="font-size: 18px;">stop</span>
+                            Stop Camera
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-Time Metrics -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons" style="color: #34a853;">analytics</span>
+                    <span class="card-title">Real-Time Metrics</span>
+                </div>
+                <div class="card-content">
+                    <div class="metrics-grid" style="grid-template-columns: 1fr;">
+                        <div class="metric-card" id="earCard">
+                            <div class="metric-label">
+                                <span class="material-icons" style="font-size: 16px;">visibility</span>
+                                Eye Aspect Ratio
+                            </div>
+                            <div class="metric-value" id="earValue">--</div>
+                        </div>
+                        <div class="metric-card" id="blinkCard">
+                            <div class="metric-label">
+                                <span class="material-icons" style="font-size: 16px;">remove_red_eye</span>
+                                Blink Rate
+                            </div>
+                            <div class="metric-value" id="blinkValue">--<span class="metric-unit">/min</span></div>
+                        </div>
+                        <div class="metric-card" id="yawnCard">
+                            <div class="metric-label">
+                                <span class="material-icons" style="font-size: 16px;">sentiment_satisfied</span>
+                                Yawn Count
+                            </div>
+                            <div class="metric-value" id="yawnValue">--</div>
+                        </div>
+                        <div class="metric-card" id="tiltCard">
+                            <div class="metric-label">
+                                <span class="material-icons" style="font-size: 16px;">screen_rotation</span>
+                                Head Tilt
+                            </div>
+                            <div class="metric-value" id="tiltValue">--<span class="metric-unit">°</span></div>
+                        </div>
+                        <div class="metric-card success">
+                            <div class="metric-label">
+                                <span class="material-icons" style="font-size: 16px;">person</span>
+                                Driver State
+                            </div>
+                            <div class="driver-state alert" id="driverState">
+                                <span class="state-dot"></span>
+                                <span>Initializing...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Pipeline -->
+        <div class="card">
+            <div class="card-header">
+                <span class="material-icons" style="color: #fbbc04;">account_tree</span>
+                <span class="card-title">AI Processing Pipeline</span>
+            </div>
+            <div class="card-content">
+                <div class="pipeline">
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon">
+                            <span class="material-icons">camera_alt</span>
+                        </div>
+                        <div class="pipeline-label">Camera<br>Input</div>
+                    </div>
+                    <span class="material-icons pipeline-arrow">arrow_forward</span>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon">
+                            <span class="material-icons">face</span>
+                        </div>
+                        <div class="pipeline-label">Face<br>Detection</div>
+                    </div>
+                    <span class="material-icons pipeline-arrow">arrow_forward</span>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon">
+                            <span class="material-icons">track_changes</span>
+                        </div>
+                        <div class="pipeline-label">Landmark<br>Tracking</div>
+                    </div>
+                    <span class="material-icons pipeline-arrow">arrow_forward</span>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon">
+                            <span class="material-icons">psychology</span>
+                        </div>
+                        <div class="pipeline-label">Drowsiness<br>Logic</div>
+                    </div>
+                    <span class="material-icons pipeline-arrow">arrow_forward</span>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon">
+                            <span class="material-icons">notifications_active</span>
+                        </div>
+                        <div class="pipeline-label">Alert<br>Trigger</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hardware & Backend -->
+        <div class="grid-2col">
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons" style="color: #ea4335;">developer_board</span>
+                    <span class="card-title">Hardware Integration Status</span>
+                </div>
+                <div class="card-content">
+                    <div class="hardware-grid">
+                        <div class="hardware-item">
+                            <div class="hardware-label">
+                                <span class="material-icons">usb</span>
+                                Arduino Serial Connection
+                            </div>
+                            <span class="hardware-status inactive" id="serialStatus">Disconnected</span>
+                        </div>
+                        <div class="hardware-item">
+                            <div class="hardware-label">
+                                <span class="material-icons">notifications</span>
+                                Alert Buzzer
+                            </div>
+                            <span class="hardware-status inactive" id="buzzerStatus">Inactive</span>
+                        </div>
+                        <div class="hardware-item">
+                            <div class="hardware-label">
+                                <span class="material-icons">vibration</span>
+                                Vibration Motor
+                            </div>
+                            <span class="hardware-status inactive" id="vibrationStatus">Inactive</span>
+                        </div>
+                    </div>
+                    <div class="info-box">
+                        <p><strong>Note:</strong> Hardware communication is handled entirely by the Python backend via USB serial. The frontend receives status updates through WebSocket or REST API.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons" style="color: #4285f4;">settings</span>
+                    <span class="card-title">Backend Connection</span>
+                </div>
+                <div class="card-content">
+                    <div class="settings-group">
+                        <div class="input-field">
+                            <label>WebSocket URL</label>
+                            <input type="text" id="wsUrl" value="ws://localhost:5000/ws" placeholder="ws://localhost:5000/ws">
+                        </div>
+                        <div class="input-field">
+                            <label>REST API Endpoint</label>
+                            <input type="text" id="apiUrl" value="http://localhost:5000/api/status" placeholder="http://localhost:5000/api/status">
+                        </div>
+                    </div>
+                    <div class="controls">
+                        <button class="btn btn-primary" id="connectBtn">
+                            <span class="material-icons" style="font-size: 18px;">link</span>
+                            Connect to Backend
+                        </button>
+                        <button class="btn btn-secondary" id="simulateBtn">
+                            <span class="material-icons" style="font-size: 18px;">refresh</span>
+                            Use Simulation
+                        </button>
+                    </div>
+                    <div class="info-box">
+                        <p><strong>Backend Integration:</strong> This interface dynamically consumes real-time data from the backend service. When the backend is unavailable, simulation mode is automatically activated for demonstration purposes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+</html>

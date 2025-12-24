@@ -1,5 +1,7 @@
 import cv2
-
+import threading
+from flask import Flask, jsonify, Response
+from flask_cors import CORS
 from src.camera.camera_manager import CameraManager
 from src.detection.face_landmarks import FaceLandmarkDetector
 from src.detection.drowsiness_metrics import compute_ear, compute_mar
@@ -7,26 +9,42 @@ from src.detection.drowsiness_logic import DrowsinessDetector
 from src.detection.head_pose import HeadPoseEstimator
 from src.interface.alert_signal import AlertSignal
 
+# FLASK APP
+app = Flask(__name__)
+CORS(app)
 
-# MediaPipe landmark indices
+# SHARED METRICS (Frontend reads this)
+latest_metrics = {
+    "ear": 0.0,
+    "blinkRate": 0,
+    "yawnCount": 0,
+    "headTilt": 0.0,
+    "state": "alert",
+    "eyesOpen": True,
+    "yawning": False,
+    "serialConnected": True,
+    "buzzerActive": False,
+    "faceBox": None
+}
+
+# MEDIAPIPE INDICES
 LEFT_EYE = [33, 160, 158, 133, 153, 144]
 MOUTH = [61, 13, 14, 291]
 
+# MAIN DETECTION LOOP
+def detection_loop():
+    global latest_metrics
 
-def main():
-    # Initialize camera
     camera = CameraManager()
     camera.start_camera()
 
-    # Get one frame to initialize head pose estimator
     frame = camera.get_frame()
     if frame is None:
-        print("Failed to read from camera")
+        print("Camera not available")
         return
 
     h, w, _ = frame.shape
 
-    # Initialize modules
     landmark_detector = FaceLandmarkDetector()
     head_pose = HeadPoseEstimator(h, w)
     drowsy_detector = DrowsinessDetector()
@@ -35,68 +53,58 @@ def main():
     while True:
         frame = camera.get_frame()
         if frame is None:
-            break
+            continue
 
         landmarks = landmark_detector.get_landmarks(frame)
 
-        status = "NO FACE"
-
         if landmarks:
-            # Compute metrics
             ear = compute_ear(landmarks, LEFT_EYE)
             mar = compute_mar(landmarks, MOUTH)
             pitch, yaw = head_pose.get_head_pose(landmarks)
 
             if yaw is not None:
-                # Decision logic
                 drowsy, yawn, distracted = drowsy_detector.update(
                     ear=ear,
                     mar=mar,
                     yaw=yaw
                 )
 
-                # Alert signal (for Arduino / GPIO / Serial later)
-                status = alert.send(
+                alert.send(
                     drowsy=drowsy,
                     yawn=yawn,
                     distracted=distracted
                 )
+                # UPDATE SHARED METRICS
+                latest_metrics.update({
+                    "ear": round(ear, 2),
+                    "blinkRate": getattr(drowsy_detector, "blink_rate", 0),
+                    "yawnCount": int(yawn),
+                    "headTilt": round(yaw, 1),
+                    "state": "drowsy" if drowsy else "alert",
+                    "eyesOpen": not drowsy,
+                    "yawning": yawn,
+                    "serialConnected": True,
+                    "buzzerActive": drowsy,
+                    # TEMP face box for frontend overlay
+                    "faceBox": {"x": 200, "y": 100, "w": 300, "h": 350}
+                })
 
-                # Display metrics
-                cv2.putText(frame, f"EAR: {ear:.2f}", (30, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-
-                cv2.putText(frame, f"MAR: {mar:.2f}", (30, 60),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-
-                cv2.putText(frame, f"Yaw: {yaw:.1f}", (30, 90),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
-
-                # Visual alerts
-                if yawn:
-                    cv2.putText(frame, "YAWNING", (30, 130),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 3)
-
-                if distracted:
-                    cv2.putText(frame, "DISTRACTED", (30, 170),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
-
-                if drowsy:
-                    cv2.putText(frame, "DROWSY", (30, 210),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
-
-        # Status line (THIS is what Arduino cares about)
-        cv2.putText(frame, f"STATUS: {status}", (30, 260),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
-
-        cv2.imshow("Drive Alert System", frame)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        # Optional local debug window (you can remove later)
+        cv2.imshow("Drive Alert System (Backend)", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     camera.stop_camera()
     cv2.destroyAllWindows()
+# API ENDPOINT (Frontend uses this)
 
-
+@app.route("/api/metrics")
+def api_metrics():
+    return jsonify(latest_metrics)
+# ENTRY POINT
 if __name__ == "__main__":
-    main()
+    # Run detection in background
+    threading.Thread(target=detection_loop, daemon=True).start()
+
+    # Run Flask server
+    app.run(host="0.0.0.0", port=5000, debug=False)
